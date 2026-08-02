@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beyond Age and Staleness — Refresh Priority Modeling</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EDE3D0;
+    --surface:#E3D6BE;
+    --surface-2:#D8C7A5;
+    --line:#C7B287;
+    --text:#22314A;
+    --muted:#6E7F8E;
+    --signal:#6B1E2A;      /* wine — genuine signal / model */
+    --baseline:#9C8763;    /* tan/coffee — baseline / chance */
+    --flag:#5C4530;        /* deep coffee — caution / limitation */
+    --decline:#4C1420;     /* deeper wine — risk, used sparingly */
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Source Sans 3', sans-serif;
+    line-height:1.65;
+    font-size:16px;
+  }
+  ::selection{background:var(--signal); color:#EDE3D0;}
+
+  .layout{display:grid; grid-template-columns:260px 1fr; max-width:1280px; margin:0 auto;}
+  @media (max-width:900px){ .layout{grid-template-columns:1fr;} .rail{display:none;} }
+
+  /* --- Rail --- */
+  .rail{
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:48px 20px 48px 32px; border-right:1px solid var(--line);
+    background:linear-gradient(180deg, var(--surface), var(--bg) 40%);
+  }
+  .rail-brand{
+    font-family:'Fraunces', serif; font-weight:600; font-size:15px; font-style:italic;
+    color:var(--signal); margin-bottom:6px;
+  }
+  .rail-sub{font-size:12px; color:var(--muted); margin-bottom:36px;}
+  .rail nav a{
+    display:flex; gap:10px; align-items:baseline;
+    font-size:13px; color:var(--muted); text-decoration:none;
+    padding:8px 0; border-left:2px solid transparent; padding-left:12px;
+    transition:color .15s, border-color .15s;
+  }
+  .rail nav a:hover{color:var(--text); border-left-color:var(--line);}
+  .rail nav a.active{color:var(--text); border-left-color:var(--signal);}
+  .rail nav a .n{font-family:'JetBrains Mono'; font-size:11px; color:var(--signal); min-width:16px;}
+
+  /* --- Main --- */
+  main{padding:0 40px;}
+  @media (max-width:900px){ main{padding:0 20px;} }
+  .container{max-width:760px; margin:0 auto; padding:64px 0 120px;}
+
+  section{padding:72px 0; border-bottom:1px solid var(--line);}
+  section:last-of-type{border-bottom:none;}
+  .eyebrow{
+    font-family:'JetBrains Mono'; font-size:12px; color:var(--signal);
+    letter-spacing:.06em; text-transform:uppercase; margin-bottom:14px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow .num{color:var(--muted);}
+  h1{font-family:'Fraunces', serif; font-weight:500; font-size:42px; line-height:1.22; letter-spacing:-.01em;}
+  h2{font-family:'Fraunces', serif; font-weight:500; font-size:27px; margin-bottom:20px; letter-spacing:-.005em;}
+  h3{font-family:'Fraunces', serif; font-weight:600; font-size:17px; margin:28px 0 10px; color:var(--text); font-style:italic;}
+  p{color:#5C4C3A; margin-bottom:16px; font-size:15.5px;}
+  p.lede{font-size:18px; color:var(--text); line-height:1.7; font-family:'Fraunces', serif; font-weight:400;}
+  strong{color:var(--text); font-weight:600;}
+  a.inline{color:var(--signal); text-decoration:none; border-bottom:1px solid rgba(110,139,99,.35);}
+  a.inline:hover{border-bottom-color:var(--signal);}
+  code{font-family:'JetBrains Mono'; font-size:13px; background:var(--surface-2); padding:2px 6px; border-radius:4px; color:#7A5C34;}
+  ul{margin:0 0 16px 0; padding-left:0; list-style:none;}
+  ul li{position:relative; padding-left:20px; margin-bottom:10px; color:#5C4C3A; font-size:15.5px;}
+  ul li::before{content:"◦"; position:absolute; left:0; color:var(--signal);}
+
+  /* --- Hero --- */
+  .hero{padding:80px 0 60px; border-bottom:1px solid var(--line);}
+  .hero-meta{display:flex; gap:24px; font-family:'JetBrains Mono'; font-size:12px; color:var(--muted); margin-bottom:28px; flex-wrap:wrap;}
+  .hero-meta span b{color:var(--text);}
+  .abstract-box{
+    margin-top:36px; padding:26px 28px; background:var(--surface);
+    border:1px solid var(--line); border-left:3px solid var(--signal); border-radius:10px;
+  }
+  .abstract-box p{color:#5C4C3A; font-size:15px; margin:0;}
+
+  /* --- Signal bar (signature comparison element) --- */
+  .signalbar-row{display:flex; align-items:center; gap:16px; margin:10px 0 22px;}
+  .signalbar-label{font-family:'JetBrains Mono'; font-size:12.5px; color:var(--muted); width:150px; flex-shrink:0;}
+  .signalbar-track{flex:1; height:26px; background:var(--surface-2); border-radius:20px; overflow:hidden; position:relative; border:1px solid var(--line);}
+  .signalbar-fill{height:100%; border-radius:20px 0 0 20px; display:flex; align-items:center; justify-content:flex-end; padding-right:10px;
+    font-family:'JetBrains Mono'; font-size:12px; font-weight:600; color:#FBF3E7;}
+  .signalbar-fill.model{background:var(--signal);}
+  .signalbar-fill.baseline{background:var(--baseline); color:#3F3226;}
+  .signalbar-fill.flag{background:var(--flag);}
+  .signalbar-fill.decline{background:var(--decline);}
+
+  /* --- Big stat --- */
+  .bigstat{display:flex; gap:48px; margin:36px 0; flex-wrap:wrap;}
+  .bigstat .item{flex:1; min-width:140px;}
+  .bigstat .num{font-family:'Fraunces', serif; font-weight:600; font-size:40px; color:var(--signal); line-height:1;}
+  .bigstat .num.grey{color:var(--baseline);}
+  .bigstat .label{font-family:'JetBrains Mono'; font-size:11.5px; color:var(--muted); margin-top:8px; letter-spacing:.02em;}
+
+  /* --- Table --- */
+  table{width:100%; border-collapse:collapse; margin:20px 0 28px; font-size:14px;}
+  th{font-family:'JetBrains Mono'; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); text-align:left; padding:10px 14px; border-bottom:1px solid var(--line);}
+  td{padding:12px 14px; border-bottom:1px solid var(--line); color:#5C4C3A; font-family:'JetBrains Mono'; font-size:13.5px;}
+  tr:hover td{background:var(--surface);}
+
+  /* --- Cards --- */
+  .card-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:24px 0;}
+  @media (max-width:600px){ .card-grid{grid-template-columns:1fr;} }
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px;}
+  .card .tag{font-family:'JetBrains Mono'; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; padding:3px 8px; border-radius:20px; display:inline-block; margin-bottom:10px;}
+  .card .tag.never{background:rgba(185,107,93,.18); color:var(--decline);}
+  .card .tag.review{background:rgba(196,138,62,.18); color:var(--flag);}
+  .card h4{font-family:'Fraunces', serif; font-weight:600; font-size:16px; margin-bottom:6px; color:var(--text);}
+  .card p{font-size:13.5px; margin:0; color:var(--muted);}
+
+  /* --- Callout --- */
+  .callout{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:22px 24px; margin:24px 0;}
+  .callout.finding{border-left:3px solid var(--signal);}
+  .callout.limit{border-left:3px solid var(--flag);}
+  .callout p{margin:0; font-size:14.5px; color:#5C4C3A;}
+  .callout .kicker{font-family:'JetBrains Mono'; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--flag); margin-bottom:8px; display:block;}
+  .callout.finding .kicker{color:var(--signal);}
+
+  /* --- Footer --- */
+  footer{padding:56px 0 40px; text-align:left;}
+  footer p{font-size:13.5px; color:var(--muted);}
+  .credit-box{
+    display:flex; align-items:center; justify-content:space-between; gap:20px;
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px 24px; margin-top:20px; flex-wrap:wrap;
+  }
+  .credit-box a{font-family:'Fraunces', serif; font-weight:600; color:var(--signal); text-decoration:none; font-size:16px; font-style:italic;}
+  .credit-box a:hover{text-decoration:underline;}
+
+  .checklist{font-family:'JetBrains Mono'; font-size:12px; color:var(--muted); margin-top:14px;}
+  .checklist span{color:var(--signal); margin-right:14px;}
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- RAIL -->
+  <aside class="rail">
+    <div class="rail-brand">Aiman Shahid</div>
+    <div class="rail-sub">FlyRank ML Internship — Capstone</div>
+    <nav id="railnav">
+      <a href="#abstract"><span class="n">00</span>Abstract</a>
+      <a href="#framing"><span class="n">01</span>Problem framing</a>
+      <a href="#data"><span class="n">02</span>Data safety</a>
+      <a href="#baseline"><span class="n">03</span>Baseline</a>
+      <a href="#model"><span class="n">04</span>Model / analysis</a>
+      <a href="#eval"><span class="n">05</span>Evaluation</a>
+      <a href="#interpret"><span class="n">06</span>Interpretation</a>
+      <a href="#recommend"><span class="n">07</span>Recommendation</a>
+      <a href="#repro"><span class="n">08</span>Reproducibility</a>
+      <a href="#credit"><span class="n">09</span>Acknowledgments</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="container">
+
+      <!-- HERO -->
+      <div class="hero">
+        <div class="hero-meta">
+          <span>Lane: <b>Refresh / Content Opportunity Scoring</b></span>
+          <span>Data: <b>FlyRank ML Internship, Mar 2026</b></span>
+          <span>Status: <b>Capstone, complete</b></span>
+        </div>
+        <h1>Beyond age and staleness: a refresh&#8209;priority model that found the real signal was clicks, not time.</h1>
+
+        <div class="bigstat">
+          <div class="item">
+            <div class="num grey">0.494</div>
+            <div class="label">rule-based baseline auc</div>
+          </div>
+          <div class="item">
+            <div class="num">0.760</div>
+            <div class="label">random forest auc</div>
+          </div>
+          <div class="item">
+            <div class="num" style="color:var(--flag)">3.5×</div>
+            <div class="label">more reliable picks than the rule</div>
+          </div>
+        </div>
+
+        <div id="abstract" class="abstract-box">
+          <p><strong>Abstract.</strong> This study asks which pages in a content portfolio most need a refresh, and whether a simple age/position rule is enough to answer that question. A rule-based baseline scored AUC 0.494 (chance-level) against a measured decline label, so a Random Forest model was trained instead, reaching AUC 0.760 under a grouped, leakage-audited validation split. The model surfaced a non-obvious, actionable pattern: many top-priority pages are not stale — they already rank well but suffer from low click-through, pointing to snippet/title fixes rather than content rewrites. The resulting ranked queue is 3.5x more reliable than the rule baseline (11.3% vs 41.1% low-confidence picks) and is intended as decision-support for editorial review, not an automated or causal claim about search performance.</p>
+        </div>
+      </div>
+
+      <!-- 01 FRAMING -->
+      <section id="framing">
+        <div class="eyebrow"><span class="num">01</span>Problem framing</div>
+        <h2>The decision this supports</h2>
+        <p class="lede">Content editors managing large page portfolios need a repeatable way to prioritize which pages deserve a refresh this cycle — manual review of thousands of pages doesn't scale.</p>
+        <p><strong>Unit of analysis:</strong> individual content page (<code>content_id</code>). <strong>Output:</strong> a decline-priority score and ranked action label — <code>refresh_now</code>, <code>monitor</code>, or <code>no_action</code>. <strong>Action taken:</strong> an editor reviews and refreshes the highest-priority pages first.</p>
+        <p><strong>Cost of a wrong call:</strong> a false <code>refresh_now</code> wastes editor time on a page that wasn't declining; a false <code>no_action</code> lets a genuinely declining high-traffic page keep losing visibility, unnoticed. Why ML at all — the baseline rule (age + position gap) tested at chance-level, so a learned model was needed to find real signal.</p>
+      </section>
+
+      <!-- 02 DATA SAFETY -->
+      <section id="data">
+        <div class="eyebrow"><span class="num">02</span>Data safety</div>
+        <h2>What went in, what was left out</h2>
+        <p><strong>Source:</strong> <code>content_refresh_anonymized.csv</code> (30,000 rows), derived from the FlyRank/internship-warehouse release — <code>fact_content_daily_performance</code> (month = 2026-03) + <code>dim_content</code>.</p>
+        <p><strong>Features used:</strong> <code>content_age_days</code>, <code>impressions_last_30d</code>, <code>avg_position</code>, <code>ctr</code>.</p>
+        <p><strong>Deliberately excluded:</strong> GA4 session data (only 4.2% availability), every client-identifying field, raw domain/URL/query strings.</p>
+        <div class="callout limit">
+          <span class="kicker">Leakage check</span>
+          <p>No hard leakage found. One caution flagged: <code>impressions_last_30d</code> partially overlaps with how <code>trend_direction</code> — and therefore the label — is itself defined, since trend is calculated from 30-day impression change. This is a definitional overlap, not future-data leakage. <code>content_id</code> is used only for grouping in the split, never as a feature.</p>
+        </div>
+        <p>Confirmed: no client names, domains, or private queries appear anywhere in the working repo.</p>
+      </section>
+
+      <!-- 03 BASELINE -->
+      <section id="baseline">
+        <div class="eyebrow"><span class="num">03</span>Baseline</div>
+        <h2>A rule, tested honestly, and it lost</h2>
+        <p>Built first: <code>score = 0.6 × age_score + 0.4 × position_gap_score</code>, producing reason codes (<code>stale_content</code>, <code>position_opportunity</code>, <code>low_priority</code>) and the same three action labels used throughout. Tested against the identical label and data as the model.</p>
+
+        <div class="signalbar-row">
+          <div class="signalbar-label">Baseline rule</div>
+          <div class="signalbar-track"><div class="signalbar-fill baseline" style="width:49.4%">0.494</div></div>
+        </div>
+        <div class="signalbar-row">
+          <div class="signalbar-label">Random chance</div>
+          <div class="signalbar-track"><div class="signalbar-fill baseline" style="width:50%; opacity:.4">0.500</div></div>
+        </div>
+
+        <p>Effectively indistinguishable from chance. This is a fair, honest negative finding, not a failure: age and position-gap alone don't predict decline in this dataset, and reporting that clearly is what motivated the modeling work that follows.</p>
+      </section>
+
+      <!-- 04 MODEL -->
+      <section id="model">
+        <div class="eyebrow"><span class="num">04</span>Model / analysis</div>
+        <h2>Random Forest, on four honest features</h2>
+        <p><strong>Method:</strong> Random Forest (200 trees, max depth 8, balanced class weight) — chosen for handling non-linear feature interactions and for giving interpretable feature importances.</p>
+        <p><strong>Target:</strong> <code>is_declining</code> = 1 if <code>trend_direction == "down"</code> (a &gt;10% impression decline, 30 days vs the previous 30) — a proxy for real-world decline, not verified ground truth.</p>
+        <p><strong>Left out on purpose:</strong> GA4-derived engagement fields, due to low coverage across the portfolio.</p>
+      </section>
+
+      <!-- 05 EVAL -->
+      <section id="eval">
+        <div class="eyebrow"><span class="num">05</span>Evaluation</div>
+        <h2>Same split, same metric, model vs baseline</h2>
+        <p><strong>Split:</strong> GroupShuffleSplit by <code>content_id</code>, 80/20 — not time-aware, since only one month of data is available.</p>
+
+        <div class="signalbar-row">
+          <div class="signalbar-label">Baseline (rule)</div>
+          <div class="signalbar-track"><div class="signalbar-fill baseline" style="width:49.4%">0.494</div></div>
+        </div>
+        <div class="signalbar-row">
+          <div class="signalbar-label">Random Forest</div>
+          <div class="signalbar-track"><div class="signalbar-fill model" style="width:76%">0.760</div></div>
+        </div>
+        <div class="signalbar-row">
+          <div class="signalbar-label">Base rate</div>
+          <div class="signalbar-track"><div class="signalbar-fill baseline" style="width:54.2%; opacity:.5">0.542</div></div>
+        </div>
+
+        <h3>Split sensitivity (w06 audit)</h3>
+        <div class="signalbar-row">
+          <div class="signalbar-label">Naive random split</div>
+          <div class="signalbar-track"><div class="signalbar-fill flag" style="width:74.7%">0.747</div></div>
+        </div>
+        <div class="signalbar-row">
+          <div class="signalbar-label">Grouped split (used)</div>
+          <div class="signalbar-track"><div class="signalbar-fill model" style="width:76%">0.760</div></div>
+        </div>
+        <p style="font-size:13.5px; color:var(--muted)">Minimal gap — expected, since each row here is a distinct <code>content_id</code> with no natural duplicates in this snapshot. Grouping remains the correct default wherever duplication risk could exist.</p>
+
+        <h3>Error analysis</h3>
+        <ul>
+          <li><strong>725 false negatives</strong> — the model under-flags high-traffic declining pages (avg. 2,889 impressions), trusting popularity as a stability signal.</li>
+          <li><strong>1,050 false positives</strong> — the model over-flags newer (avg. 206 days), lower-traffic (avg. 485 impressions) pages.</li>
+        </ul>
+      </section>
+
+      <!-- 06 INTERPRETATION -->
+      <section id="interpret">
+        <div class="eyebrow"><span class="num">06</span>Interpretation</div>
+        <h2>What the model actually leaned on</h2>
+
+        <h3>Feature importance</h3>
+        <div class="signalbar-row"><div class="signalbar-label">avg_position</div><div class="signalbar-track"><div class="signalbar-fill model" style="width:37.5%">0.375</div></div></div>
+        <div class="signalbar-row"><div class="signalbar-label">content_age_days</div><div class="signalbar-track"><div class="signalbar-fill model" style="width:25.8%; opacity:.75">0.258</div></div></div>
+        <div class="signalbar-row"><div class="signalbar-label">impressions_last_30d</div><div class="signalbar-track"><div class="signalbar-fill model" style="width:25.6%; opacity:.6">0.256</div></div></div>
+        <div class="signalbar-row"><div class="signalbar-label">ctr</div><div class="signalbar-track"><div class="signalbar-fill model" style="width:11.1%; opacity:.45">0.111</div></div></div>
+
+        <div class="callout finding">
+          <span class="kicker">Key finding</span>
+          <p>Top-priority pages in the ranked queue are <strong>not</strong> primarily old or stale — they're high-ranking pages (position #1–3) with low CTR. <code>low_ctr</code> is the single largest reason code: 1,663 of 3,108 <code>refresh_now</code> picks. This runs against the naive assumption that "refresh" means "rewrite old content."</p>
+        </div>
+
+        <p style="font-size:13.5px; color:var(--muted)">Negative result, stated plainly: the baseline rule's core assumption — that age and position gap predict decline — does not hold in this dataset. A well-understood "no effect" is a valid result, not a failed one.</p>
+      </section>
+
+      <!-- 07 RECOMMENDATION -->
+      <section id="recommend">
+        <div class="eyebrow"><span class="num">07</span>Recommendation</div>
+        <h2>What an editor does with this tomorrow</h2>
+        <p>Full ranked queue: 30,000 pages scored — <strong>3,108</strong> <code>refresh_now</code>, <strong>19,646</strong> <code>monitor</code>, <strong>7,246</strong> <code>no_action</code>.</p>
+        <p>Start with <code>refresh_now</code> picks tagged <code>low_ctr</code> — fast wins (title/snippet fix, not a full rewrite) on pages that already rank well.</p>
+
+        <div class="signalbar-row">
+          <div class="signalbar-label">Rule baseline noise</div>
+          <div class="signalbar-track"><div class="signalbar-fill decline" style="width:41.1%">41.1%</div></div>
+        </div>
+        <div class="signalbar-row">
+          <div class="signalbar-label">Model noise</div>
+          <div class="signalbar-track"><div class="signalbar-fill model" style="width:11.3%">11.3%</div></div>
+        </div>
+        <p style="font-size:13.5px; color:var(--muted)">Share of top-priority picks with &lt;10 impressions (low-confidence, noisy signal) — model picks are meaningfully more trustworthy.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag review">Always review</span>
+            <h4>Top 20 picks, every cycle</h4>
+            <p>Spot-check against page content before assigning editor work. Same for any pick under 10 impressions, or a <code>low_ctr</code> tag on an already top-3 page — may be a snippet issue, not a content problem.</p>
+          </div>
+          <div class="card">
+            <span class="tag never">Never automate</span>
+            <h4>Auto-publish, or silent deprioritization</h4>
+            <p>No auto-publishing off model output. No dropping <code>no_action</code> pages without a manual check — false negatives exist. No using this output as sole justification without human-verified traffic data.</p>
+          </div>
+        </div>
+        <p style="font-size:13.5px; color:var(--muted)"><strong>Confidence:</strong> directional and decision-support only — not causal, not validated beyond this single-month sample.</p>
+      </section>
+
+      <!-- 08 REPRO -->
+      <section id="repro">
+        <div class="eyebrow"><span class="num">08</span>Reproducibility</div>
+        <h2>Re-running this from a clean clone</h2>
+        <p><strong>Repo:</strong> <a class="inline" href="https://github.com/aimanshahid800/flyrank-ml-internship" target="_blank">github.com/aimanshahid800/flyrank-ml-internship</a></p>
+        <table>
+          <tr><th>Notebook</th><th>Purpose</th></tr>
+          <tr><td>w04_baseline_score.ipynb</td><td style="font-family:'Source Sans 3'; color:#5C4C3A;">Rule-based baseline (ML-07)</td></tr>
+          <tr><td>w05_model.ipynb</td><td style="font-family:'Source Sans 3'; color:#5C4C3A;">Model + grouped split</td></tr>
+          <tr><td>w06_validation_audit.ipynb</td><td style="font-family:'Source Sans 3'; color:#5C4C3A;">Split sensitivity + leakage audit</td></tr>
+          <tr><td>w07_action_playbook.ipynb</td><td style="font-family:'Source Sans 3'; color:#5C4C3A;">Ranked queue + exports</td></tr>
+          <tr><td>capstone.ipynb</td><td style="font-family:'Source Sans 3'; color:#5C4C3A;">Full write-up</td></tr>
+        </table>
+        <p>To re-run: clone the repo, open each notebook in Colab, <code>Runtime → Run All</code> (<code>random_state=42</code> throughout, all notebooks re-verified end to end).</p>
+        <p><strong>Exports:</strong> <code>w07_ranked_action_queue.csv</code>, <code>w07_top10_preview.csv</code>, <code>w07_action_summary.csv</code>, chart assets under <code>work/outputs/charts/</code>.</p>
+      </section>
+
+      <!-- 09 CREDIT -->
+      <section id="credit" style="border-bottom:none;">
+        <div class="eyebrow"><span class="num">09</span>Acknowledgments &amp; data credit</div>
+        <div class="credit-box">
+          <span style="color:var(--muted); font-size:14px;">Built on the FlyRank ML Internship dataset.</span>
+          <a href="https://flyrank.ai" target="_blank">flyrank.ai →</a>
+        </div>
+      </section>
+
+      <footer>
+        <p>Aiman Shahid · Machine Learning track, FlyRank Bosnia Challenge Internship</p>
+        <div class="checklist">
+          <span>✓ observed</span><span>✓ measured</span><span>✓ directional</span><span>✓ decision-support</span>
+        </div>
+      </footer>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  const links = document.querySelectorAll('#railnav a');
+  const sections = Array.from(links).map(l => document.querySelector(l.getAttribute('href')));
+  window.addEventListener('scroll', () => {
+    let idx = 0;
+    sections.forEach((s, i) => { if (s && window.scrollY >= s.offsetTop - 160) idx = i; });
+    links.forEach(l => l.classList.remove('active'));
+    links[idx].classList.add('active');
+  });
+</script>
+</body>
+</html>
